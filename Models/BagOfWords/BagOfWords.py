@@ -36,11 +36,11 @@ class BagOfWords:
         self._reset_state()
         self._preprocess()
         self._vectorise()
-        return np.array(self.bow_vectors)
+        return np.array(self.bow_vectors), np.array(self.vocab_list)
 
     def _preprocess(self):
         for line in self.data:
-            label, text = line.split(' ', 1)
+            label, text = line.split('\t', 1)
             if label == "spam":
                 self.texts.append(text.lower())
                 self.vocab.update(text.lower().split())

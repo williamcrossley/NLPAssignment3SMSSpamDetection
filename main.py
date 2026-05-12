@@ -1,7 +1,8 @@
 from Models.BagOfWords.BagOfWords import BagOfWords
+from Helper import read_small_dataset, read_large_dataset_label_text_only
 
 
-def test_bag_of_words_vectorisation():
+def test_bow_vectorisation():
 	test_text = "The cat jumped over the other cat"
 	labelled_input = [f"spam {test_text}"]
 
@@ -18,13 +19,19 @@ def test_bag_of_words_vectorisation():
 	print("After vectorise:")
 	print("bow_vectors:", bag_of_words.bow_vectors)
 
-	fit_transform_model = BagOfWords(labelled_input)
-	fit_transform_result = fit_transform_model.fit_transform()
+	fit_transform_result = bag_of_words.fit_transform()
 	print("After fit_transform:")
 	print(fit_transform_result)
 
+def run_bow_training():
+    data = read_small_dataset()
+    bow_model = BagOfWords(data)
+    vectors, vocab_list = bow_model.fit_transform()
+    print(vocab_list)
+    print(vectors)
+
 def main():
-    test_bag_of_words_vectorisation()
+    run_bow_training()
 
 if __name__ == "__main__":
 	main()
