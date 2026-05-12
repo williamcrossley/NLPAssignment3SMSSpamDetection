@@ -30,15 +30,20 @@ class BagOfWords:
         self.texts = []
         self.vocab = set()
         self.bow_vectors = []
+    
+    def fit_transform(self):
+        self._preprocess()
+        self._vectorise()
+        return np.array(self.bow_vectors)
 
-    def preprocess(self):
+    def _preprocess(self):
         for line in self.data:
             label, text = line.split(' ', 1)
             if label == "spam":
                 self.texts.append(text.lower())
                 self.vocab.update(text.lower().split())
 
-    def vectorise(self):
+    def _vectorise(self):
         vocab_list = sorted(list(self.vocab))
         vocab_index = {word: idx for idx, word in enumerate(vocab_list)}
         
@@ -48,8 +53,3 @@ class BagOfWords:
                 if word in vocab_index:
                     vector[vocab_index[word]] += 1
             self.bow_vectors.append(vector)
-
-    def fit_transform(self):
-        self.preprocess()
-        self.vectorise()
-        return np.array(self.bow_vectors)

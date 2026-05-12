@@ -9,12 +9,12 @@ def test_bag_of_words_vectorisation():
 
 	bag_of_words = BagOfWords(labelled_input)
 
-	bag_of_words.preprocess()
+	bag_of_words._preprocess()
 	print("After preprocess:")
 	print("texts:", bag_of_words.texts)
 	print("vocab:", sorted(bag_of_words.vocab))
 
-	bag_of_words.vectorise()
+	bag_of_words._vectorise()
 	print("After vectorise:")
 	print("bow_vectors:", bag_of_words.bow_vectors)
 
