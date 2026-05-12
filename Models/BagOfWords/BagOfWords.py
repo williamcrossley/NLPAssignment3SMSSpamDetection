@@ -6,7 +6,7 @@
 # Step 2: Convert all text to lowercase to ensure uniformity. Punctuation will be included but requires
 #   more complex tokenisation to seperate from the words if required. The idea is spam seems to include a lot
 #   of espectially repeated punctuation, so it may be useful to keep it in.
-# Step 3: Tokenise. Split words and punctuation.
+# Step 3: Tokenise. Split words and punctuation. <- TODO: punctuation tokenisation.
 # BUILD VOCAB
 # Step 4: Vectorise. Essentially make a vector that counts the frequency of each word.
 # TEST INSATNCE
@@ -21,6 +21,9 @@
 #   eg. in UTF8, crylic І (d086) and latin I (49) look the same, and may cause issues in vectorisation.
 #   In GSM7, the only lookalikes are upside down excalm (64) and i (which arent very close), and maybe i with an accent (7).
 #   So its not really a problem worth solving. Otherwise we would have to have a conversion step to convert all lookalikes.
+
+# Note: The embedding this makes is insanely sparse, as SMS messages are short, and often very varied in content. By design this makes BOW a very bad embedding for this task,
+#   ballooning very quickly and not providing much useful information.
 
 import numpy as np
 
@@ -37,6 +40,16 @@ class BagOfWords:
         self._preprocess()
         self._vectorise()
         return np.array(self.bow_vectors), np.array(self.vocab_list)
+
+    def save_state(self, file_name="./Models/BagOfWords/bag_of_words_state.txt"): #debug, probably wont include in final version unless required
+        with open(file_name, 'w', encoding='utf-8') as f:
+            f.write("Vocabulary:\n")
+            f.write("\t".join(self.vocab_list))
+            f.write("\n\nBag of Words Vectors:\n")
+            for vector in self.bow_vectors:
+                f.write(" ".join(map(str, vector)))
+                f.write("\n")
+        return file_name
 
     def _preprocess(self):
         for line in self.data:

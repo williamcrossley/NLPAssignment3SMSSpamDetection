@@ -29,6 +29,7 @@ def run_bow_training():
     vectors, vocab_list = bow_model.fit_transform()
     print(vocab_list)
     print(vectors)
+    bow_model.save_state()
 
 def main():
     run_bow_training()
