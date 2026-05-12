@@ -29,9 +29,11 @@ class BagOfWords:
         self.data = data
         self.texts = []
         self.vocab = set()
+        self.vocab_list = []
         self.bow_vectors = []
     
     def fit_transform(self):
+        self._reset_state()
         self._preprocess()
         self._vectorise()
         return np.array(self.bow_vectors)
@@ -44,12 +46,18 @@ class BagOfWords:
                 self.vocab.update(text.lower().split())
 
     def _vectorise(self):
-        vocab_list = sorted(list(self.vocab))
-        vocab_index = {word: idx for idx, word in enumerate(vocab_list)}
+        self.vocab_list = sorted(list(self.vocab))
+        vocab_index = {word: idx for idx, word in enumerate(self.vocab_list)}
         
         for text in self.texts:
-            vector = np.zeros(len(vocab_list), dtype=int)
+            vector = np.zeros(len(self.vocab_list), dtype=int)
             for word in text.split():
                 if word in vocab_index:
                     vector[vocab_index[word]] += 1
             self.bow_vectors.append(vector)
+        
+    def _reset_state(self):
+        self.texts = []
+        self.vocab = set()
+        self.vocab_list = []
+        self.bow_vectors = []
