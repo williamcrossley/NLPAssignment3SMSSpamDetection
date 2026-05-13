@@ -9,9 +9,9 @@ Using Bag of words, CNN, and BERT models to detect SMS spam messages.
 
 - Steps to run:
 1. Create venv with (from project root):
-  py -m venv .venv
-  ./.venv/Scripts/python.exe -m pip install -r requirements.txt
-  ./.venv/Scripts/Activate.ps1 (per terminal session)
+  - "py -m venv .venv"
+  - "./.venv/Scripts/python.exe -m pip install -r requirements.txt"
+  - "./.venv/Scripts/Activate.ps1" (per terminal session)
   - Alternatively, just scope your commpands to the python install in ./venv/Scripts/python.exe and install the dependencies but just activate the venv, its easier. 
 2. run python ./main.py
     - Later I'll split this into probably a training script and a run script, with trained states stored in file, but for now this is fine.
