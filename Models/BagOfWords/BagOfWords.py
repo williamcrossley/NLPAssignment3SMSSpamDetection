@@ -30,47 +30,183 @@ import numpy as np
 class BagOfWords:
     def __init__(self, data):
         self.data = data
-        self.texts = []
-        self.vocab = set()
-        self.vocab_list = []
-        self.bow_vectors = []
     
-    def fit_transform(self):
-        self._reset_state()
-        self._preprocess()
-        self._vectorise()
-        return np.array(self.bow_vectors), np.array(self.vocab_list)
+    def fit_transform(self, label_filter="spam", binary=False):
+        texts, vocab_list = self._preprocess(self.data, label_filter=label_filter)
+        vectors = self._vectorise(texts, vocab_list, binary=binary)
+        return vectors, vocab_list
 
-    def save_state(self, file_name="./Models/BagOfWords/bag_of_words_state.txt"): #debug, probably wont include in final version unless required
+    @staticmethod
+    def save_state(vectors, vocab_list, file_name="./Models/BagOfWords/bag_of_words_state.txt"): #debug, probably wont include in final version unless required
         with open(file_name, 'w', encoding='utf-8') as f:
             f.write("Vocabulary:\n")
-            f.write("\t".join(self.vocab_list))
+            f.write("\t".join(map(str, vocab_list)))
             f.write("\n\nBag of Words Vectors:\n")
-            for vector in self.bow_vectors:
+            for vector in vectors:
                 f.write(" ".join(map(str, vector)))
                 f.write("\n")
         return file_name
 
-    def _preprocess(self):
-        for line in self.data:
-            label, text = line.split('\t', 1)
-            if label == "spam":
-                self.texts.append(text.lower())
-                self.vocab.update(text.lower().split())
+    @staticmethod
+    def _preprocess(data, label_filter="spam"):
+        allowed_labels = BagOfWords._normalise_label_filter(label_filter)
+        texts = []
+        vocab = set()
 
-    def _vectorise(self):
-        self.vocab_list = sorted(list(self.vocab))
-        vocab_index = {word: idx for idx, word in enumerate(self.vocab_list)}
-        
-        for text in self.texts:
-            vector = np.zeros(len(self.vocab_list), dtype=int)
+        for line in data:
+            label, text = line.split('\t', 1)
+            label = label.strip().lower()
+            normalised_text = text.lower()
+
+            if allowed_labels is None or label in allowed_labels:
+                texts.append(normalised_text)
+                vocab.update(normalised_text.split())
+
+        vocab_list = np.array(sorted(vocab))
+        return texts, vocab_list
+
+    @staticmethod
+    def _vectorise(texts, vocab_list, binary=False):
+        vocab_index = {word: idx for idx, word in enumerate(vocab_list)}
+        vectors = []
+
+        for text in texts:
+            vector = np.zeros(len(vocab_list), dtype=int)
             for word in text.split():
                 if word in vocab_index:
-                    vector[vocab_index[word]] += 1
-            self.bow_vectors.append(vector)
-        
-    def _reset_state(self):
-        self.texts = []
-        self.vocab = set()
-        self.vocab_list = []
-        self.bow_vectors = []
+                    if binary:
+                        vector[vocab_index[word]] = 1
+                    else:
+                        vector[vocab_index[word]] += 1
+            vectors.append(vector)
+
+        return np.array(vectors)
+
+    @staticmethod
+    def _normalise_label_filter(label_filter):
+        if label_filter is None:
+            return None
+
+        if isinstance(label_filter, str):
+            return {label_filter.lower()}
+
+        normalised_labels = set()
+
+        for label in label_filter:
+            normalised_labels.add(label.lower())
+
+        return normalised_labels
+
+# TODO: Add reference to report for algorithm source
+class BernoulliSpamClassifier:
+    @staticmethod
+    def score_text(text, spam_vectors, spam_vocab_list, ham_vectors, ham_vocab_list, alpha=1.0, threshold=0.0):
+        merged_vocab_list = BernoulliSpamClassifier._merge_vocabularies(spam_vocab_list, ham_vocab_list)
+
+        aligned_spam_vectors = BernoulliSpamClassifier._align_vectors_to_shared_vocab(
+            spam_vectors,
+            spam_vocab_list,
+            merged_vocab_list
+        )
+        aligned_ham_vectors = BernoulliSpamClassifier._align_vectors_to_shared_vocab(
+            ham_vectors,
+            ham_vocab_list,
+            merged_vocab_list
+        )
+
+        log_prior, feature_log_odds = BernoulliSpamClassifier._compute_word_spam_weights(
+            aligned_spam_vectors,
+            aligned_ham_vectors,
+            alpha
+        )
+
+        text_vector = BernoulliSpamClassifier._vectorise_text_to_shared_vocab(text, merged_vocab_list)
+        score = BernoulliSpamClassifier._compute_spam_score(text_vector, log_prior, feature_log_odds)
+
+        if score > threshold:
+            label = "spam"
+        else:
+            label = "ham"
+
+        return score, label
+
+    @staticmethod
+    def _merge_vocabularies(spam_vocab_list, ham_vocab_list):
+        merged_vocab = set()
+
+        for word in spam_vocab_list:
+            merged_vocab.add(str(word))
+
+        for word in ham_vocab_list:
+            merged_vocab.add(str(word))
+
+        return sorted(merged_vocab)
+
+    @staticmethod
+    def _align_vectors_to_shared_vocab(vectors, source_vocab_list, target_vocab_list):
+        source_index = {}
+        target_index = {}
+        aligned_vectors = []
+
+        for index, word in enumerate(source_vocab_list):
+            source_index[str(word)] = index
+
+        for index, word in enumerate(target_vocab_list):
+            target_index[str(word)] = index
+
+        for vector in vectors:
+            aligned_vector = np.zeros(len(target_vocab_list), dtype=int)
+
+            for word in source_index:
+                source_position = source_index[word]
+                target_position = target_index[word]
+
+                if vector[source_position] > 0:
+                    aligned_vector[target_position] = 1
+
+            aligned_vectors.append(aligned_vector)
+
+        return np.array(aligned_vectors)
+
+    @staticmethod
+    def _compute_word_spam_weights(spam_vectors, ham_vectors, alpha):
+        spam_document_count = len(spam_vectors)
+        ham_document_count = len(ham_vectors)
+
+        if spam_document_count == 0 or ham_document_count == 0:
+            raise ValueError("Both spam and ham vectors are required to score text.")
+
+        spam_presence = np.sum(spam_vectors, axis=0)
+        ham_presence = np.sum(ham_vectors, axis=0)
+
+        spam_probability = (spam_presence + alpha) / (spam_document_count + 2 * alpha)
+        ham_probability = (ham_presence + alpha) / (ham_document_count + 2 * alpha)
+
+        log_prior = np.log(spam_document_count / ham_document_count)
+        feature_log_odds = np.log(spam_probability / ham_probability)
+
+        return log_prior, feature_log_odds
+
+    @staticmethod
+    def _vectorise_text_to_shared_vocab(text, vocab_list):
+        vocab_index = {}
+        text_vector = np.zeros(len(vocab_list), dtype=int)
+
+        for index, word in enumerate(vocab_list):
+            vocab_index[word] = index
+
+        for word in text.lower().split():
+            if word in vocab_index:
+                text_vector[vocab_index[word]] = 1
+
+        return text_vector
+
+    @staticmethod
+    def _compute_spam_score(vector, log_prior, feature_log_odds):
+        score = log_prior
+
+        for index, is_present in enumerate(vector):
+            if is_present:
+                score += feature_log_odds[index]
+
+        return score
