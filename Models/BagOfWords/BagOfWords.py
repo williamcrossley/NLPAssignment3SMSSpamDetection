@@ -2,28 +2,36 @@
 # PREPROCESSING
 # Step 1: Process labeling by separating the first word as the label and the rest as the text.
 #   Storing this in an array of tuples for easy access.
-#   ONLY spam labels will be included, as ham labels are not needed for BOW.
 # Step 2: Convert all text to lowercase to ensure uniformity. Punctuation will be included but requires
 #   more complex tokenisation to seperate from the words if required. The idea is spam seems to include a lot
 #   of espectially repeated punctuation, so it may be useful to keep it in.
 # Step 3: Tokenise. Split words and punctuation. <- TODO: punctuation tokenisation.
-# BUILD VOCAB
-# Step 4: Vectorise. Essentially make a vector that counts the frequency of each word.
-# TEST INSATNCE
-# Step 5: For a given text, we can 
+# BUILD VECTORS
+# Step 4: Vectorise. Essentially make a vector for each text with the amount of columns as there is words in the vocab.
+#   I chose to do binary presence rather than frequency of a token in a text at i,j, as it works better with the Bernoulli classifier.
+# BUILD MERGED VOCAB AND ALIGNED VECTORS
+# Step 5: So we have the spam and ham vectors, but they have different vocabularies and column orders. We need to merge the vocabularies and align the vectors to the merged vocab.
+#   So we end up with the ham/spam vectors, but arranged so for a given word in the vocab, the same column index in both vectors correspond to that word.
+#   TODO: Make this more efficient by vectorising the whole set at once, and split the vectorisation based on labels, rather than vectorising separately and then merging.
+# CLASSIFICATION
+#   At a high level, for each word we compare how often it appears in spam vs ham messages,
+#   then convert that into a spam leaning weight (log-odds style). If a word is more common in spam,
+#   it gets a positive weight, if more common in ham it gets a negative weight.
+# Step 6: For a new message, vectorise it against the same merged vocabulary.
+#   This gives us a binary presence vector where each column lines up with the same word used in training.
+# Step 7: Score the message by starting with the prior and adding weights for words that are present.
+#   Positive final score means spam, negative means ham (with an optional threshold if we want to tune sensitivity).
+#   Smoothing (alpha) is also applied so unseen/rare words do not produce zero probability issues.
 
-# Note: Character encodings will remain in UTF 8, as that is what the dataset was originally in. 
-#   GSM7 is the standard for SMS, but its hard to work with in file based systems wanting full bytes.
-#   This implementation will remain agnostic to the character encoding, so if required to be used in a
-#   GSM7 environment, it will only require a change to the dataset character encoding.
-
-# We will also be ignoring character look alike issues (since they are common in spam detection avoidance) as the reduced charset of GSM7 doesn't really allow it.
+# We will be ignoring character look alike issues (since they are common in spam detection avoidance) as the reduced charset of GSM7 (SMS Standard) doesn't really allow it.
 #   eg. in UTF8, crylic І (d086) and latin I (49) look the same, and may cause issues in vectorisation.
 #   In GSM7, the only lookalikes are upside down excalm (64) and i (which arent very close), and maybe i with an accent (7).
 #   So its not really a problem worth solving. Otherwise we would have to have a conversion step to convert all lookalikes.
 
 # Note: The embedding this makes is insanely sparse, as SMS messages are short, and often very varied in content. By design this makes BOW a very bad embedding for this task,
 #   ballooning very quickly and not providing much useful information.
+#   However, during testing its accuracy isn't actually all that terrible, double however, I think its due to the spam used in both datasets being more 'conventional'
+#   As spam evolves over time, or new types of spam appear, this model will likely struggle. 
 
 import numpy as np
 
@@ -31,21 +39,10 @@ class BagOfWords:
     def __init__(self, data):
         self.data = data
     
-    def fit_transform(self, label_filter="spam", binary=False):
+    def fit_transform(self, label_filter="spam"):
         texts, vocab_list = self._preprocess(self.data, label_filter=label_filter)
-        vectors = self._vectorise(texts, vocab_list, binary=binary)
+        vectors = self._vectorise(texts, vocab_list)
         return vectors, vocab_list
-
-    @staticmethod
-    def save_state(vectors, vocab_list, file_name="./Models/BagOfWords/bag_of_words_state.txt"): #debug, probably wont include in final version unless required
-        with open(file_name, 'w', encoding='utf-8') as f:
-            f.write("Vocabulary:\n")
-            f.write("\t".join(map(str, vocab_list)))
-            f.write("\n\nBag of Words Vectors:\n")
-            for vector in vectors:
-                f.write(" ".join(map(str, vector)))
-                f.write("\n")
-        return file_name
 
     @staticmethod
     def _preprocess(data, label_filter="spam"):
@@ -56,17 +53,22 @@ class BagOfWords:
         for line in data:
             label, text = line.split('\t', 1)
             label = label.strip().lower()
-            normalised_text = text.lower()
 
             if allowed_labels is None or label in allowed_labels:
+                normalised_text = text.lower()
                 texts.append(normalised_text)
-                vocab.update(normalised_text.split())
+                vocab.update(BagOfWords._tokenise(normalised_text))
 
         vocab_list = np.array(sorted(vocab))
         return texts, vocab_list
 
     @staticmethod
-    def _vectorise(texts, vocab_list, binary=False):
+    def _tokenise(text):
+        normalised_text = text.lower().split()
+        return normalised_text
+
+    @staticmethod
+    def _vectorise(texts, vocab_list):
         vocab_index = {word: idx for idx, word in enumerate(vocab_list)}
         vectors = []
 
@@ -74,10 +76,7 @@ class BagOfWords:
             vector = np.zeros(len(vocab_list), dtype=int)
             for word in text.split():
                 if word in vocab_index:
-                    if binary:
-                        vector[vocab_index[word]] = 1
-                    else:
-                        vector[vocab_index[word]] += 1
+                    vector[vocab_index[word]] = 1
             vectors.append(vector)
 
         return np.array(vectors)

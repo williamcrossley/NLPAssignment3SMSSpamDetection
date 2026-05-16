@@ -35,6 +35,7 @@ class BERTSpamClassifier:
 	def __init__(
 		self,
 		dataset_path=None,
+		dataset_lines=None,
 		model_name="prajjwal1/bert-tiny",
 		output_dir=None,
 		max_length=128,
@@ -46,6 +47,7 @@ class BERTSpamClassifier:
 	):
 		self.repo_root = Path(__file__).resolve().parents[2]
 		self.dataset_path = Path(dataset_path) if dataset_path else self.repo_root / "UCISmallDataSet.txt"
+		self.dataset_lines = dataset_lines
 		self.model_name = model_name
 		self.max_length = max_length
 		self.test_size = test_size
@@ -247,7 +249,8 @@ class BERTSpamClassifier:
 		labels = []
 		texts = []
 
-		for label, text in self._parse_labelled_messages(self._read_dataset_lines()):
+		source_lines = self.dataset_lines if self.dataset_lines is not None else self._read_dataset_lines()
+		for label, text in self._parse_labelled_messages(source_lines):
 			labels.append(self.label_to_id[label])
 			texts.append(text)
 
@@ -321,10 +324,17 @@ class BERTSpamClassifier:
 		)
 
 	def _training_metadata(self, max_train_samples=None, max_test_samples=None):
-		dataset_bytes = self.dataset_path.read_bytes()
+		if self.dataset_lines is not None:
+			dataset_content = "\n".join(self.dataset_lines).encode("utf-8")
+			dataset_hash = sha256(dataset_content).hexdigest()
+			dataset_path_str = "in_memory"
+		else:
+			dataset_bytes = self.dataset_path.read_bytes()
+			dataset_hash = sha256(dataset_bytes).hexdigest()
+			dataset_path_str = str(self.dataset_path.resolve())
 		return {
-			"dataset_path": str(self.dataset_path.resolve()),
-			"dataset_sha256": sha256(dataset_bytes).hexdigest(),
+			"dataset_path": dataset_path_str,
+			"dataset_sha256": dataset_hash,
 			"model_name": self.model_name,
 			"max_length": self.max_length,
 			"test_size": self.test_size,
