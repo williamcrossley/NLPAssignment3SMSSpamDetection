@@ -1,9 +1,8 @@
-if __name__ == "__main__":
-	print("Starting...")
+print("Starting...")
 
 from Models.BagOfWords.BagOfWords import BagOfWords, BernoulliSpamClassifier
 from Models.BERT.BERT import BERTSpamClassifier
-from Helper import read_small_dataset, read_large_dataset_label_text_only, print_single_text_test_results
+from Helper import read_small_dataset, print_single_text_test_results
 
 def test_bow(text):
 	print("Testing BagOfWords/Bernoulli Classifier on small dataset...")

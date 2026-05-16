@@ -102,14 +102,17 @@ class BERTSpamClassifier:
 			label2id=self.label_to_id,
 		)
 
+		# Evaluate before training
 		trainer_pre = Trainer(
 			model=self.model,
+			args=TrainingArguments(output_dir=str(self.checkpoint_dir), dataloader_pin_memory=False, report_to=[]),
 			eval_dataset=tokenized_dataset["test"],
 			compute_metrics=self._compute_metrics,
 		)
 		pre_results = trainer_pre.evaluate()
 		pre_accuracy = pre_results["eval_accuracy"]
 
+		# Actually fine tune the model
 		self.trainer = Trainer(
 			model=self.model,
 			args=self._build_training_arguments(),
@@ -150,25 +153,12 @@ class BERTSpamClassifier:
 
 		evaluation_trainer = Trainer(
 			model=self.model,
+			args=TrainingArguments(output_dir=str(self.checkpoint_dir), dataloader_pin_memory=False, report_to=[]),
 			eval_dataset=tokenized_dataset["test"],
 			compute_metrics=self._compute_metrics,
 		)
 		results = evaluation_trainer.evaluate()
 		return {"loss": results["eval_loss"], "accuracy": results["eval_accuracy"]}
-
-	def evaluate_messages(self, labelled_messages):
-		self._ensure_model_loaded(force_retrain=False)
-
-		labels = []
-		predictions = []
-
-		for label, text in self._parse_labelled_messages(labelled_messages):
-			prediction = self.predict(text, train_if_needed=False)
-			labels.append(self.label_to_id[label])
-			predictions.append(self.label_to_id[prediction["label"]])
-
-		accuracy = accuracy_score(labels, predictions)
-		return {"accuracy": accuracy, "samples": len(labels)}
 
 	def predict(self, text, train_if_needed=True, force_retrain=False):
 		if train_if_needed:
