@@ -230,21 +230,22 @@ class BERTSpamClassifier:
 		self.output_dir.mkdir(parents=True, exist_ok=True)
 		self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
-		return TrainingArguments(
+		return TrainingArguments( # TODO: Explain args
 			output_dir=str(self.checkpoint_dir),
-			eval_strategy="epoch",
-			save_strategy="epoch",
+			seed=self.seed,
+			num_train_epochs=self.num_train_epochs,
 			per_device_train_batch_size=self.per_device_train_batch_size,
 			per_device_eval_batch_size=self.per_device_eval_batch_size,
-			num_train_epochs=self.num_train_epochs,
-			logging_dir=str(self.output_dir / "logs"),
-			logging_steps=1000,
+			eval_strategy="epoch",
+			save_strategy="epoch",
 			load_best_model_at_end=True,
 			metric_for_best_model="accuracy",
 			greater_is_better=True,
-			report_to=[],
 			save_total_limit=1,
-			seed=self.seed,
+			logging_dir=str(self.output_dir / "logs"),
+			logging_steps=1000,
+			report_to=[],
+			dataloader_pin_memory=False,
 		)
 
 	def _prepare_dataset(self, max_train_samples=None, max_test_samples=None):

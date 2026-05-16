@@ -33,6 +33,8 @@
 #   However, during testing its accuracy isn't actually all that terrible, double however, I think its due to the spam used in both datasets being more 'conventional'
 #   As spam evolves over time, or new types of spam appear, this model will likely struggle.
 
+#Note: Assumed DTO for data is an array of lines, where each line is a string with the format "LABEL\tTEXT".
+
 import numpy as np
 
 class BagOfWords:
