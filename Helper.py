@@ -7,25 +7,27 @@ def read_small_dataset():
 		return file.read().splitlines()
 
 def read_large_dataset_as_tab_lines(n_spam=500, n_ham=500):
-    ham_lines = []
-    spam_lines = []
+	ham_lines = []
+	spam_lines = []
 
-    with open('MendeleyLargeDataSet.csv', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            if len(ham_lines) >= n_ham and len(spam_lines) >= n_spam:
-                break
+	with open('MendeleyLargeDataSet.csv', encoding='utf-8') as f:
+		reader = csv.DictReader(f)
+		for row in reader:
+			if len(ham_lines) >= n_ham and len(spam_lines) >= n_spam:
+				break
 
-            label = row['LABEL'].strip().lower()
+			label = row['LABEL'].strip().lower()
+			if label == 'smishing':
+				label = 'spam'
 
-            text = row['TEXT']
+			text = row['TEXT']
 
-            if label == 'ham' and len(ham_lines) < n_ham:
-                ham_lines.append(f"ham\t{text}")
-            elif label == 'spam' and len(spam_lines) < n_spam:
-                spam_lines.append(f"spam\t{text}")
+			if label == 'ham' and len(ham_lines) < n_ham:
+				ham_lines.append(f"ham\t{text}")
+			elif label == 'spam' and len(spam_lines) < n_spam:
+				spam_lines.append(f"spam\t{text}")
 
-    return ham_lines + spam_lines
+	return ham_lines + spam_lines
 
 def print_metrics(model_name, all_labels, predicted_labels):
 	label_names = ["ham", "spam"]

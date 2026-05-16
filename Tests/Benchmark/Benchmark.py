@@ -80,7 +80,6 @@ def main():
 	test_size = 500
 	train_lines = read_small_dataset()
 	test_lines = read_large_dataset_as_tab_lines(n_spam=test_size, n_ham=test_size)
-	print(test_lines[:5])  # Debug: Print first 5 test lines to verify format
 
 	print(f"Training set: {len(train_lines)} samples (UCI)")
 	print(f"Test set: {len(test_lines)} samples (Mendeley: {test_size} ham + {test_size} spam)")
