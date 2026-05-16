@@ -9,7 +9,7 @@
 
 # Initial testing OK but not great, phrases like "You have won a free lottery ticket! Click here to claim your prize."
 # are 98% ham, probably due to imbalance of ham/spam ratio in the UCI set. Further inv required
-# Its still reporting 98% accuracy, but I am suspicious of the accuracy test. We are currently using 20% of the training set for testing, I think that needs tweaking.
+# Its still reporting 98% accuracy and an f1 score of 0.98, but I am suspicious our benchmarking test is wrong.
 
 import json
 import logging

@@ -33,7 +33,14 @@
 #   However, during testing its accuracy isn't actually all that terrible, double however, I think its due to the spam used in both datasets being more 'conventional'
 #   As spam evolves over time, or new types of spam appear, this model will likely struggle.
 
-#Note: Assumed DTO for data is an array of lines, where each line is a string with the format "LABEL\tTEXT".
+# Note: Assumed DTO for data is an array of lines, where each line is a string with the format "LABEL\tTEXT".
+
+# Note: For the classifier, started with an alpha value of 1, as some alpha is needed due to the training set bias but I wasn't sure how much
+#   I found at 1.0 its number of false positives was very high compared to false negatives, so I reduced it to 0.5 to reduce the
+#   counteraction of the spam / ham imbalance in the training set, which SIGNIFICANTLY reduced the false positive rate, with only a minor increase to false negatives.
+#   eg. In the benchmark (500 ham, 500 spam), with alpha 1.0 it was 113 fp and 6 fn, with alpha 0.5 it was 45 fp, 7 fn. Overall a large improvement.
+#       I'm sure there is possible tweaking to be done with the threshold as well, and I could run a regression test to approach the optimal values,
+#       but I the purpose of this is a benchmark, not a fully optimised solution, as well as your tolerance for fp / fn depends on application, I will leave it at that.
 
 import numpy as np
 
@@ -101,7 +108,7 @@ class BagOfWords:
 # TODO: Add reference to report for algorithm source
 class BernoulliSpamClassifier:
 	@staticmethod
-	def score_text(text, spam_vectors, spam_vocab_list, ham_vectors, ham_vocab_list, alpha=1.0, threshold=0.0):
+	def score_text(text, spam_vectors, spam_vocab_list, ham_vectors, ham_vocab_list, alpha=0.5, threshold=0.0):
 		merged_vocab_list = BernoulliSpamClassifier._merge_vocabularies(spam_vocab_list, ham_vocab_list)
 
 		aligned_spam_vectors = BernoulliSpamClassifier._align_vectors_to_shared_vocab(

@@ -33,7 +33,7 @@ def train_and_evaluate_bow(train_lines, test_lines):
 		ham_vectors, ham_vocab, merged_vocab_list
 	)
 	log_prior, feature_log_odds = BernoulliSpamClassifier._compute_word_spam_weights(
-		aligned_spam_vectors, aligned_ham_vectors, alpha=1.0
+		aligned_spam_vectors, aligned_ham_vectors, alpha=0.5
 	)
 
 	true_labels = []
@@ -77,21 +77,23 @@ def train_and_evaluate_bert(train_lines, test_lines, force_retrain=False):
 
 def main():
 	print("Loading datasets...")
+	test_size = 500
 	train_lines = read_small_dataset()
-	test_lines = read_large_dataset_as_tab_lines(n_spam=500, n_ham=500)
+	test_lines = read_large_dataset_as_tab_lines(n_spam=test_size, n_ham=test_size)
+	print(test_lines[:5])  # Debug: Print first 5 test lines to verify format
 
 	print(f"Training set: {len(train_lines)} samples (UCI)")
-	print(f"Test set: {len(test_lines)} samples (Mendeley: 500 ham + 500 spam)")
+	print(f"Test set: {len(test_lines)} samples (Mendeley: {test_size} ham + {test_size} spam)")
 
 	# BagOfWords / Bernoulli
 	print("\n[1/2] Training and evaluating Bag of Words (Bernoulli Naive Bayes)...")
-	bow_true, bow_pred = train_and_evaluate_bow(train_lines, test_lines)
-	bow_metrics = print_metrics("Bag of Words (Bernoulli NB)", bow_true, bow_pred)
+	bow_all_labels, bow_pred_labels = train_and_evaluate_bow(train_lines, test_lines)
+	bow_metrics = print_metrics("Bag of Words (Bernoulli NB)", bow_all_labels, bow_pred_labels)
 
 	# BERT
 	print("\n[2/2] Training and evaluating BERT...")
-	bert_true, bert_pred = train_and_evaluate_bert(train_lines, test_lines)
-	bert_metrics = print_metrics("BERT (bert-tiny fine-tuned)", bert_true, bert_pred)
+	bert_all_labels, bert_pred_labels = train_and_evaluate_bert(train_lines, test_lines)
+	bert_metrics = print_metrics("BERT (bert-tiny fine-tuned)", bert_all_labels, bert_pred_labels)
 
 	# Comparison
 	print(f"\n{'='*60}")
