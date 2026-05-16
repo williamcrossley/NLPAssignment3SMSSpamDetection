@@ -1,0 +1,11 @@
+{
+  // Automatically remove trailing whitespace on save
+  "files.trimTrailingWhitespace": true,
+
+  // Optionally insert a newline at the end of files
+  "files.insertFinalNewline": true,
+
+  // Define indentation style (spaces vs tabs) and size
+  "editor.insertSpaces": false,
+  "editor.tabSize": 4
+}

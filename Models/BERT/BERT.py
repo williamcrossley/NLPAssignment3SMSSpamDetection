@@ -1,5 +1,5 @@
 # Heavily inspired by the week 7 lab, but made more robust and reusable.
-# Does support fine tuning caching and auto detection of training presence, and will rerun if training is removed. 
+# Does support fine tuning caching and auto detection of training presence, and will rerun if training is removed.
 # Also added metadata tracking on the chached model so you can switch states between single text tests run against the full training set,
 # or use a subset of the training data for training, and a subset for testing.
 # It was also raelly helpful for testing.
@@ -7,7 +7,7 @@
 # In terms of design choices and assumptions, we are using the same tiny bert from the lab, and the supplied tokeniser, fine tuner/trainer.
 # the majority of this file just deals with model prep, cache management, and evaluation. The fine tuning and tokenisation is pretty much as is from the lab, with some minor adjustments to work with the new dataset management.
 
-# Initial testing OK but not great, phrases like "You have won a free lottery ticket! Click here to claim your prize." 
+# Initial testing OK but not great, phrases like "You have won a free lottery ticket! Click here to claim your prize."
 # are 98% ham, probably due to imbalance of ham/spam ratio in the UCI set. Further inv required
 # Its still reporting 98% accuracy, but I am suspicious of the accuracy test. We are currently using 20% of the training set for testing, I think that needs tweaking.
 
@@ -56,6 +56,8 @@ class BERTSpamClassifier:
 		self.per_device_train_batch_size = per_device_train_batch_size
 		self.per_device_eval_batch_size = per_device_eval_batch_size
 
+		# Output dir (model caching etc) defaults to bert_tiny_sms, so you can use it for individual text testing.
+		# Benchmarking uses its own cached model dir (bert_benchmark) so it can have different training states without interfering with the single test model.
 		base_output_dir = Path(output_dir) if output_dir else Path(__file__).resolve().parent / "artifacts" / "bert_tiny_sms"
 		self.output_dir = base_output_dir
 		self.checkpoint_dir = self.output_dir / "trainer"
@@ -345,19 +347,3 @@ class BERTSpamClassifier:
 			"max_train_samples": max_train_samples,
 			"max_test_samples": max_test_samples,
 		}
-
-
-def main():
-	classifier = BERTSpamClassifier()
-	training_result = classifier.train()
-	classifier.print_training_summary(training_result)
-
-	prediction = classifier.predict("You have won a free lottery ticket! Click here to claim your prize.")
-	print("Prediction:", prediction)
-
-	evaluation = classifier.evaluate()
-	print("Dataset accuracy:", evaluation)
-
-
-if __name__ == "__main__":
-	main()
