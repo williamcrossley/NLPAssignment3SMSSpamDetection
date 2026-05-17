@@ -42,6 +42,36 @@
 
 import numpy as np
 
+
+class BagOfWordsWithClassifier:
+	def __init__(self, data, alpha=0.5, threshold=0.0):
+		self.data = data
+		self.alpha = alpha
+		self.threshold = threshold
+		self.vocab_list = None
+		self.vocab_index = None
+		self.log_prior = None
+		self.feature_log_odds = None
+
+	def fit(self):
+		bow = BagOfWords(self.data)
+		spam_vectors, ham_vectors, self.vocab_list = bow.fit_transform()
+		self.vocab_index = {word: idx for idx, word in enumerate(self.vocab_list)}
+		self.log_prior, self.feature_log_odds = BernoulliSpamClassifier._compute_word_spam_weights(
+			spam_vectors, ham_vectors, self.alpha
+		)
+		return self
+
+	def predict(self, text):
+		text_vector = np.zeros(len(self.vocab_list), dtype=int)
+		for word in BagOfWords._tokenise(text.lower()):
+			if word in self.vocab_index:
+				text_vector[self.vocab_index[word]] = 1
+		score = BernoulliSpamClassifier._compute_spam_score(text_vector, self.log_prior, self.feature_log_odds)
+		label = "spam" if score > self.threshold else "ham"
+		return score, label
+
+
 class BagOfWords:
 	def __init__(self, data):
 		self.data = data
@@ -75,8 +105,7 @@ class BagOfWords:
 
 	@staticmethod
 	def _tokenise(text):
-		normalised_text = text.lower().split()
-		return normalised_text
+		return text.split()
 
 	@staticmethod
 	def _vectorise(texts, vocab_list):
@@ -85,7 +114,7 @@ class BagOfWords:
 
 		for text in texts:
 			vector = np.zeros(len(vocab_list), dtype=int)
-			for word in text.split():
+			for word in BagOfWords._tokenise(text):
 				if word in vocab_index:
 					vector[vocab_index[word]] = 1
 			vectors.append(vector)
@@ -140,7 +169,7 @@ class BernoulliSpamClassifier:
 		for index, word in enumerate(vocab_list):
 			vocab_index[word] = index
 
-		for word in text.lower().split():
+		for word in BagOfWords._tokenise(text.lower()):
 			if word in vocab_index:
 				text_vector[vocab_index[word]] = 1
 
@@ -148,6 +177,8 @@ class BernoulliSpamClassifier:
 
 	@staticmethod
 	def _compute_spam_score(vector, log_prior, feature_log_odds):
+		# Could use dot product of vector and feature_log_odds, since vector is binary presence,
+		# but in case we ever want to make it frequency based I wont do that optimisation here.
 		score = log_prior
 
 		for index, is_present in enumerate(vector):

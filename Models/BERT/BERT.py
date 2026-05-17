@@ -46,7 +46,6 @@ class BERTSpamClassifier:
 		per_device_train_batch_size=16,
 		per_device_eval_batch_size=32,
 	):
-		self.repo_root = Path(__file__).resolve().parents[2]
 		self.dataset_lines = dataset_lines if dataset_lines is not None else read_small_dataset()
 		self.model_name = model_name
 		self.max_length = max_length
@@ -72,6 +71,7 @@ class BERTSpamClassifier:
 		self.model = None
 		self.trainer = None
 		self.dataset = None
+		self._cached_dataset_hash = None
 
 	def train(self, force_retrain=False, max_train_samples=None, max_test_samples=None):
 		if not force_retrain and self._has_valid_cached_model(max_train_samples, max_test_samples):
@@ -220,7 +220,7 @@ class BERTSpamClassifier:
 		return TrainingArguments(
 			output_dir=str(self.checkpoint_dir),
 			seed=self.seed,
-			num_train_epochs=self.num_train_epochs,  # 4 gave the best balance between over/under fitting for the benchmark.
+			num_train_epochs=self.num_train_epochs,  # 4 gave the best balance between over/under fitting for the benchmark. 5 sometimes gave 1 less fn in the benchmark, but for the extra compute thats not worth it.
 			per_device_train_batch_size=self.per_device_train_batch_size, # 16 is a fair batch size for most CPUs/RAM, balancing speed and memory use.
 			per_device_eval_batch_size=self.per_device_eval_batch_size, # eval is more efficient than training, so 32 is roughly equivialent to 16 for training in terms of speed/memory.
 			eval_strategy="epoch", # For a data set this small, epoch eval is fine. If using the menedley set, may want to do 'steps' every 500 or 1000 or so.
@@ -300,10 +300,12 @@ class BERTSpamClassifier:
 		)
 
 	def _training_metadata(self, max_train_samples=None, max_test_samples=None):
-		dataset_content = "\n".join(f"{label}\t{text}" for label, text in self.dataset_lines).encode("utf-8")
-		dataset_hash = sha256(dataset_content).hexdigest()
+		if self._cached_dataset_hash is None:
+			dataset_content = "\n".join(f"{label}\t{text}" for label, text in self.dataset_lines).encode("utf-8")
+			self._cached_dataset_hash = sha256(dataset_content).hexdigest()
+
 		return {
-			"dataset_sha256": dataset_hash,
+			"dataset_sha256": self._cached_dataset_hash,
 			"model_name": self.model_name,
 			"max_length": self.max_length,
 			"test_size": self.test_size,

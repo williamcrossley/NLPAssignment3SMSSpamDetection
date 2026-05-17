@@ -14,26 +14,19 @@ print("Starting...")
 from tabulate import tabulate
 
 from Helper import read_small_dataset, read_large_dataset_as_tab_lines, print_metrics
-from Models.BagOfWords.BagOfWords import BagOfWords, BernoulliSpamClassifier
+from Models.BagOfWords.BagOfWords import BagOfWordsWithClassifier
 from Models.BERT.BERT import BERTSpamClassifier
 
 
 def train_and_evaluate_bow(train_lines, test_lines):
-	bow = BagOfWords(train_lines)
-	spam_vectors, ham_vectors, vocab_list = bow.fit_transform()
-
-	# Pre compute the spam-vs-ham weights once, then reuse them for every external benchmark message.
-	log_prior, feature_log_odds = BernoulliSpamClassifier._compute_word_spam_weights(
-		spam_vectors, ham_vectors, alpha=0.5
-	)
+	classifier = BagOfWordsWithClassifier(train_lines)
+	classifier.fit()
 
 	true_labels = []
 	predicted_labels = []
 
 	for label, text in test_lines:
-		text_vector = BernoulliSpamClassifier._vectorise_text_to_shared_vocab(text, vocab_list)
-		score = BernoulliSpamClassifier._compute_spam_score(text_vector, log_prior, feature_log_odds)
-		prediction = "spam" if score > 0.0 else "ham"
+		_, prediction = classifier.predict(text)
 
 		true_labels.append(label)
 		predicted_labels.append(prediction)

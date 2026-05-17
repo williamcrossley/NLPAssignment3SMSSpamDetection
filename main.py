@@ -1,20 +1,19 @@
 print("Starting...")
 
-from Models.BagOfWords.BagOfWords import BagOfWords, BernoulliSpamClassifier
+from Models.BagOfWords.BagOfWords import BagOfWordsWithClassifier
 from Models.BERT.BERT import BERTSpamClassifier
 from Helper import read_small_dataset, print_single_text_test_results
 
 # Single-text checks are only sanity tests; the benchmark script is the main comparative evaluation.
 def test_bow(spam_text, ham_text, dataset_lines):
 	print("Testing BagOfWords/Bernoulli Classifier on small dataset...")
-	bow = BagOfWords(dataset_lines)
+	classifier = BagOfWordsWithClassifier(dataset_lines)
+	classifier.fit()
 
-	spam_vectors, ham_vectors, vocab = bow.fit_transform()
-
-	spam_score, spam_label = BernoulliSpamClassifier.score_text(spam_text, spam_vectors, ham_vectors, vocab)
+	spam_score, spam_label = classifier.predict(spam_text)
 	print_single_text_test_results("BagOfWords/Bernoulli", spam_text, spam_score, spam_label)
 
-	ham_score, ham_label = BernoulliSpamClassifier.score_text(ham_text, spam_vectors, ham_vectors, vocab)
+	ham_score, ham_label = classifier.predict(ham_text)
 	print_single_text_test_results("BagOfWords/Bernoulli", ham_text, ham_score, ham_label)
 
 def test_bert(spam_text, ham_text, dataset_lines):

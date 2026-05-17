@@ -13,6 +13,10 @@ Using Bag of words and BERT models to detect SMS spam messages.
   to ensure our models weren't just learning the style / language of a particular set which is vulernable to
   sourcing/date/location biases etc. Using a different set better tests actual real world model performance
 
+- Since the bert training is reasonably expensive, I have implemented caching of the model with metadata tracking
+  to update when the model config updates (training data, parameters etc). If you want to retrain after you have already trained,
+  you can delete the artifacts folder (or benchmark / tiny-bert subfolders), or if writing code for it, you can use force_retrain
+
 - Steps to run:
 1. Create venv with (from project root):
 	- "py -m venv .venv"
