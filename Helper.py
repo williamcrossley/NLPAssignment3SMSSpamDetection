@@ -3,10 +3,12 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 from tabulate import tabulate
 
 def read_small_dataset():
+	# UCI data is already in tab-labelled text form, so parse it directly into the shared (label, text) DTO.
 	with open('UCISmallDataSet.txt', encoding='utf-8') as file:
 		return [_parse_tab_labelled_line(line) for line in file.read().splitlines()]
 
 def read_large_dataset_as_tab_lines(n_spam=500, n_ham=500):
+	# Read a balanced subset from Mendeley so benchmark size is controlled and spam/ham counts are explicit.
 	ham_rows = []
 	spam_rows = []
 
@@ -27,6 +29,7 @@ def read_large_dataset_as_tab_lines(n_spam=500, n_ham=500):
 	return ham_rows + spam_rows
 
 def print_metrics(model_name, all_labels, predicted_labels):
+	# Convert to binary once so sklearn metrics and the text report stay consistent.
 	label_names = ["ham", "spam"]
 	all_binary = [1 if l == "spam" else 0 for l in all_labels]
 	pred_binary = [1 if l == "spam" else 0 for l in predicted_labels]
@@ -72,6 +75,7 @@ def print_single_text_test_results(model_name, test_text, confidence, label):
 
 def _normalise_label(label):
 	normalised_label = label.strip().lower()
+	# The larger dataset uses "smishing" for SMS phishing; treat it as spam for this repo's binary task.
 	if normalised_label == 'smishing':
 		normalised_label = 'spam'
 

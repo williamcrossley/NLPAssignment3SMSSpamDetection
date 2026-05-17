@@ -1,20 +1,15 @@
 # Heavily inspired by the week 7 lab, but made more robust and reusable.
-# Does support fine tuning caching and auto detection of training presence, and will rerun if training is removed.
-# Also added metadata tracking on the chached model so you can switch states between single text tests run against the full training set,
+# Supports fine tuning cache checks and auto detection of training state, and will retrain if cache/metadata is removed or changed.
+# Also added metadata tracking on the cached model so you can switch states between single text tests run against the full training set,
 # or use a subset of the training data for training, and a subset for testing.
-# It was also raelly helpful for testing.
+# It was also really helpful for testing.
 
 # In terms of design choices and assumptions, we are using the same tiny bert from the lab, and the supplied tokeniser, fine tuner/trainer.
 # the majority of this file just deals with model prep, cache management, and evaluation. The fine tuning and tokenisation is pretty much as is from the lab, with some minor adjustments to work with the new dataset management.
 
-# Initial testing OK but not great, phrases like "You have won a free lottery ticket! Click here to claim your prize."
-# are 98% ham, probably due to imbalance of ham/spam ratio in the UCI set. Further inv required
-# Its still reporting 98% accuracy and an f1 score of 0.98, but I am suspicious our benchmarking test is wrong.
-
 # Also, I had it so that the model would only read the dataset when training was required, but all uses of this model
-# (main and benchmark) use the same dataset as BOW, so I decided to just make this class take the same DTO of aready read and processed data
-# so that I can just read it once and pass it to both models. It does mean if you were to use this model by itself you would have to
-# check for valid model and read the dataset yourself (or just read always but ew), but for the use cases I think this is better.
+# (main and benchmark) use the same dataset as BOW, so I decided to make this class take the same DTO of already read and processed data
+# so I can read it once and pass it to both models. If no DTO is provided, it falls back to read_small_dataset().
 
 import json
 import logging

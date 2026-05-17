@@ -7,7 +7,7 @@ repo_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo_root))
 os.chdir(repo_root)
 
-# Force unbuffered output
+# Flush progress output immediately so long training runs still show useful feedback in the terminal.
 sys.stdout.reconfigure(line_buffering=True)
 print("Starting...")
 
@@ -19,11 +19,10 @@ from Models.BERT.BERT import BERTSpamClassifier
 
 
 def train_and_evaluate_bow(train_lines, test_lines):
-	"Train BagOfWords/Bernoulli classifier on train_lines, evaluate on test_lines."
 	bow = BagOfWords(train_lines)
 	spam_vectors, ham_vectors, vocab_list = bow.fit_transform()
 
-	# Pre-compute word spam weights once
+	# Pre compute the spam-vs-ham weights once, then reuse them for every external benchmark message.
 	log_prior, feature_log_odds = BernoulliSpamClassifier._compute_word_spam_weights(
 		spam_vectors, ham_vectors, alpha=0.5
 	)
@@ -69,6 +68,9 @@ def main():
 
 	print(f"Training set: {len(train_lines)} samples (UCI)")
 	print(f"Test set: {len(test_lines)} samples (Mendeley: {test_size} ham + {test_size} spam)")
+
+	# Both models are trained on UCI and then evaluated on a separate Mendeley sample for a cross-dataset benchmark.
+	# That makes this a harder and more realistic test than re-evaluating on another UCI split.
 
 	# BagOfWords / Bernoulli
 	print("\n[1/2] Training and evaluating Bag of Words (Bernoulli Naive Bayes)...")

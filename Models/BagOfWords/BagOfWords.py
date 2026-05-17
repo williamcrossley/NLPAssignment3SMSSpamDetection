@@ -1,7 +1,7 @@
 #Algorithm
 # PREPROCESSING
-# Step 1: Process labeling by separating the first word as the label and the rest as the text.
-#   Storing this in an array of tuples for easy access.
+# Step 1: Assume labels and text are already provided as (label, text) tuples by the dataset reader.
+#   This class consumes that DTO directly for easy access.
 # Step 2: Convert all text to lowercase to ensure uniformity. Punctuation will be included but requires
 #   more complex tokenisation to seperate from the words if required. The idea is spam seems to include a lot
 #   of espectially repeated punctuation, so it may be useful to keep it in.
@@ -118,6 +118,8 @@ class BernoulliSpamClassifier:
 
 		if spam_document_count == 0 or ham_document_count == 0:
 			raise ValueError("Both spam and ham vectors are required to score text.")
+		if alpha <= 0:
+			raise ValueError("Alpha must be greater than 0 for smoothing.")
 
 		spam_presence = np.sum(spam_vectors, axis=0)
 		ham_presence = np.sum(ham_vectors, axis=0)

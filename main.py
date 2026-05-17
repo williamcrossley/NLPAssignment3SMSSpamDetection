@@ -4,6 +4,7 @@ from Models.BagOfWords.BagOfWords import BagOfWords, BernoulliSpamClassifier
 from Models.BERT.BERT import BERTSpamClassifier
 from Helper import read_small_dataset, print_single_text_test_results
 
+# Single-text checks are only sanity tests; the benchmark script is the main comparative evaluation.
 def test_bow(spam_text, ham_text, dataset_lines):
 	print("Testing BagOfWords/Bernoulli Classifier on small dataset...")
 	bow = BagOfWords(dataset_lines)
