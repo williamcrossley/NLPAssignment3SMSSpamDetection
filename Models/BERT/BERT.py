@@ -11,6 +11,11 @@
 # are 98% ham, probably due to imbalance of ham/spam ratio in the UCI set. Further inv required
 # Its still reporting 98% accuracy and an f1 score of 0.98, but I am suspicious our benchmarking test is wrong.
 
+# Also, I had it so that the model would only read the dataset when training was required, but all uses of this model
+# (main and benchmark) use the same dataset as BOW, so I decided to just make this class take the same DTO of aready read and processed data
+# so that I can just read it once and pass it to both models. It does mean if you were to use this model by itself you would have to
+# check for valid model and read the dataset yourself (or just read always but ew), but for the use cases I think this is better.
+
 import json
 import logging
 import os
@@ -26,6 +31,8 @@ from sklearn.model_selection import train_test_split
 from tabulate import tabulate
 from transformers import BertForSequenceClassification, BertTokenizerFast, Trainer, TrainingArguments
 
+from Helper import read_small_dataset
+
 os.environ["WANDB_DISABLED"] = "true"
 transformers.logging.set_verbosity_error()
 logging.getLogger("transformers").setLevel(logging.ERROR)
@@ -34,7 +41,6 @@ logging.getLogger("transformers").setLevel(logging.ERROR)
 class BERTSpamClassifier:
 	def __init__(
 		self,
-		dataset_path=None,
 		dataset_lines=None,
 		model_name="prajjwal1/bert-tiny",
 		output_dir=None,
@@ -46,8 +52,7 @@ class BERTSpamClassifier:
 		per_device_eval_batch_size=32,
 	):
 		self.repo_root = Path(__file__).resolve().parents[2]
-		self.dataset_path = Path(dataset_path) if dataset_path else self.repo_root / "UCISmallDataSet.txt"
-		self.dataset_lines = dataset_lines
+		self.dataset_lines = dataset_lines if dataset_lines is not None else read_small_dataset()
 		self.model_name = model_name
 		self.max_length = max_length
 		self.test_size = test_size
@@ -75,15 +80,10 @@ class BERTSpamClassifier:
 	def train(self, force_retrain=False, max_train_samples=None, max_test_samples=None):
 		if not force_retrain and self._has_valid_cached_model(max_train_samples, max_test_samples):
 			self._load_cached_model(max_train_samples, max_test_samples)
-			evaluation = self.evaluate(
-				force_retrain=False,
-				max_train_samples=max_train_samples,
-				max_test_samples=max_test_samples,
-			)
 			return {
 				"cached": True,
 				"pre_eval_accuracy": None,
-				"post_eval_accuracy": evaluation["accuracy"],
+				"post_eval_accuracy": None,
 				"train_result": None,
 			}
 
@@ -242,8 +242,7 @@ class BERTSpamClassifier:
 		labels = []
 		texts = []
 
-		source_lines = self.dataset_lines if self.dataset_lines is not None else self._read_dataset_lines()
-		for label, text in self._parse_labelled_messages(source_lines):
+		for label, text in self.dataset_lines:
 			labels.append(self.label_to_id[label])
 			texts.append(text)
 
@@ -284,20 +283,6 @@ class BERTSpamClassifier:
 		accuracy = accuracy_score(labels, predictions)
 		return {"accuracy": accuracy}
 
-	def _read_dataset_lines(self):
-		with self.dataset_path.open(encoding="utf-8") as dataset_file:
-			return dataset_file.read().splitlines()
-
-	def _parse_labelled_messages(self, labelled_messages):
-		parsed_messages = []
-		for line in labelled_messages:
-			label, text = line.split("\t", 1)
-			normalised_label = label.strip().lower()
-			if normalised_label not in self.label_to_id:
-				raise ValueError(f"Unsupported label '{label}'. Expected 'ham' or 'spam'.")
-			parsed_messages.append((normalised_label, text.strip()))
-		return parsed_messages
-
 	def _has_valid_cached_model(self, max_train_samples=None, max_test_samples=None):
 		if not self.model_dir.exists() or not self.metadata_path.exists():
 			return False
@@ -317,16 +302,9 @@ class BERTSpamClassifier:
 		)
 
 	def _training_metadata(self, max_train_samples=None, max_test_samples=None):
-		if self.dataset_lines is not None:
-			dataset_content = "\n".join(self.dataset_lines).encode("utf-8")
-			dataset_hash = sha256(dataset_content).hexdigest()
-			dataset_path_str = "in_memory"
-		else:
-			dataset_bytes = self.dataset_path.read_bytes()
-			dataset_hash = sha256(dataset_bytes).hexdigest()
-			dataset_path_str = str(self.dataset_path.resolve())
+		dataset_content = "\n".join(f"{label}\t{text}" for label, text in self.dataset_lines).encode("utf-8")
+		dataset_hash = sha256(dataset_content).hexdigest()
 		return {
-			"dataset_path": dataset_path_str,
 			"dataset_sha256": dataset_hash,
 			"model_name": self.model_name,
 			"max_length": self.max_length,

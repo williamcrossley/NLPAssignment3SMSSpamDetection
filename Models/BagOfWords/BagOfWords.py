@@ -33,7 +33,7 @@
 #   However, during testing its accuracy isn't actually all that terrible, double however, I think its due to the spam used in both datasets being more 'conventional'
 #   As spam evolves over time, or new types of spam appear, this model will likely struggle.
 
-# Note: Assumed DTO for data is an array of lines, where each line is a string with the format "LABEL\tTEXT".
+# Note: Assumed DTO for data is an array of tuples with the format (label, text).
 
 # Note: For the classifier, started with an alpha value of 1, as some alpha is needed due to the training set bias but I wasn't sure how much
 #   I found at 1.0 its number of false positives was very high compared to false negatives, so I reduced it to 0.5 to reduce the
@@ -59,10 +59,7 @@ class BagOfWords:
 		texts = []
 		vocab = set()
 
-		for line in data:
-			label, text = line.split('\t', 1)
-			label = label.strip().lower()
-
+		for label, text in data:
 			if allowed_labels is None or label in allowed_labels:
 				normalised_text = text.lower()
 				texts.append(normalised_text)

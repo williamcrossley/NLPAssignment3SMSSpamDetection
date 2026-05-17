@@ -4,30 +4,27 @@ from tabulate import tabulate
 
 def read_small_dataset():
 	with open('UCISmallDataSet.txt', encoding='utf-8') as file:
-		return file.read().splitlines()
+		return [_parse_tab_labelled_line(line) for line in file.read().splitlines()]
 
 def read_large_dataset_as_tab_lines(n_spam=500, n_ham=500):
-	ham_lines = []
-	spam_lines = []
+	ham_rows = []
+	spam_rows = []
 
 	with open('MendeleyLargeDataSet.csv', encoding='utf-8') as f:
 		reader = csv.DictReader(f)
 		for row in reader:
-			if len(ham_lines) >= n_ham and len(spam_lines) >= n_spam:
+			if len(ham_rows) >= n_ham and len(spam_rows) >= n_spam:
 				break
 
-			label = row['LABEL'].strip().lower()
-			if label == 'smishing':
-				label = 'spam'
+			label = _normalise_label(row['LABEL'])
+			text = row['TEXT'].strip()
 
-			text = row['TEXT']
+			if label == 'ham' and len(ham_rows) < n_ham:
+				ham_rows.append((label, text))
+			elif label == 'spam' and len(spam_rows) < n_spam:
+				spam_rows.append((label, text))
 
-			if label == 'ham' and len(ham_lines) < n_ham:
-				ham_lines.append(f"ham\t{text}")
-			elif label == 'spam' and len(spam_lines) < n_spam:
-				spam_lines.append(f"spam\t{text}")
-
-	return ham_lines + spam_lines
+	return ham_rows + spam_rows
 
 def print_metrics(model_name, all_labels, predicted_labels):
 	label_names = ["ham", "spam"]
@@ -71,3 +68,15 @@ def print_single_text_test_results(model_name, confidence, label):
 	print(f"Confidence: {confidence}")
 	print(f"Predicted Label: {label}")
 	print(f"\n\n")
+
+def _normalise_label(label):
+	normalised_label = label.strip().lower()
+	if normalised_label == 'smishing':
+		normalised_label = 'spam'
+
+	return normalised_label
+
+
+def _parse_tab_labelled_line(line):
+	label, text = line.split('\t', 1)
+	return _normalise_label(label), text.strip()

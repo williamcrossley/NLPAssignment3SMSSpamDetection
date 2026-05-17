@@ -39,10 +39,7 @@ def train_and_evaluate_bow(train_lines, test_lines):
 	true_labels = []
 	predicted_labels = []
 
-	for line in test_lines:
-		label, text = line.split('\t', 1)
-		label = label.strip().lower()
-
+	for label, text in test_lines:
 		text_vector = BernoulliSpamClassifier._vectorise_text_to_shared_vocab(text, merged_vocab_list)
 		score = BernoulliSpamClassifier._compute_spam_score(text_vector, log_prior, feature_log_odds)
 		prediction = "spam" if score > 0.0 else "ham"
@@ -65,9 +62,7 @@ def train_and_evaluate_bert(train_lines, test_lines, force_retrain=False):
 	true_labels = []
 	predicted_labels = []
 
-	for line in test_lines:
-		label, text = line.split('\t', 1)
-		label = label.strip().lower()
+	for label, text in test_lines:
 		prediction = classifier.predict(text, train_if_needed=False)
 		true_labels.append(label)
 		predicted_labels.append(prediction["label"])
