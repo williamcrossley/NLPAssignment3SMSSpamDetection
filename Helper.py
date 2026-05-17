@@ -61,10 +61,11 @@ def print_metrics(model_name, all_labels, predicted_labels):
 
 	return {"accuracy": accuracy, "precision": precision, "recall": recall, "f1": f1}
 
-def print_single_text_test_results(model_name, confidence, label):
+def print_single_text_test_results(model_name, test_text, confidence, label):
 	print(f"\n{'='*60}")
 	print(f" {model_name} Single Text Test Result")
 	print(f"{'='*60}")
+	print(f"Test Text: {test_text}")
 	print(f"Confidence: {confidence}")
 	print(f"Predicted Label: {label}")
 	print(f"\n\n")

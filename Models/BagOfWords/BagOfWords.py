@@ -5,7 +5,7 @@
 # Step 2: Convert all text to lowercase to ensure uniformity. Punctuation will be included but requires
 #   more complex tokenisation to seperate from the words if required. The idea is spam seems to include a lot
 #   of espectially repeated punctuation, so it may be useful to keep it in.
-# Step 3: Tokenise. Split words and punctuation. <- TODO: punctuation tokenisation.
+# Step 3: Tokenise. Split words based on spaces. I planned originally to do punctiation too but ran out of time, as well as this is supposed to be a benchmark representing simple NLP techniques, so its kind of out of scope.
 # BUILD VECTORS
 # Step 4: Build a single vocabulary from all texts (both spam and ham), then vectorise every text against this
 #   shared vocabulary. Binary presence is used rather than frequency at i,j, as it works better with the Bernoulli classifier.

@@ -26,7 +26,7 @@ import numpy as np
 import torch
 import transformers
 from datasets import Dataset, DatasetDict
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, f1_score
 from sklearn.model_selection import train_test_split
 from tabulate import tabulate
 from transformers import BertForSequenceClassification, BertTokenizerFast, Trainer, TrainingArguments
@@ -45,9 +45,9 @@ class BERTSpamClassifier:
 		model_name="prajjwal1/bert-tiny",
 		output_dir=None,
 		max_length=128,
-		test_size=0.2,
+		test_size=0.2, # 0.2 of the training set used for eval, seems to be a good balance for this size of set
 		seed=42,
-		num_train_epochs=3,
+		num_train_epochs=4,
 		per_device_train_batch_size=16,
 		per_device_eval_batch_size=32,
 	):
@@ -60,6 +60,7 @@ class BERTSpamClassifier:
 		self.num_train_epochs = num_train_epochs
 		self.per_device_train_batch_size = per_device_train_batch_size
 		self.per_device_eval_batch_size = per_device_eval_batch_size
+		self.metric_for_best_model = "f1"
 
 		# Output dir (model caching etc) defaults to bert_tiny_sms, so you can use it for individual text testing.
 		# Benchmarking uses its own cached model dir (bert_benchmark) so it can have different training states without interfering with the single test model.
@@ -79,6 +80,7 @@ class BERTSpamClassifier:
 
 	def train(self, force_retrain=False, max_train_samples=None, max_test_samples=None):
 		if not force_retrain and self._has_valid_cached_model(max_train_samples, max_test_samples):
+			print("Loaded cached model. Skipping training.")
 			self._load_cached_model(max_train_samples, max_test_samples)
 			return {
 				"cached": True,
@@ -87,6 +89,7 @@ class BERTSpamClassifier:
 				"train_result": None,
 			}
 
+		print("Training cache not found, forced retrain, or metadata changed. Training model...")
 		self.dataset = self._prepare_dataset(
 			max_train_samples=max_train_samples,
 			max_test_samples=max_test_samples,
@@ -189,7 +192,6 @@ class BERTSpamClassifier:
 
 	def print_training_summary(self, training_result):
 		if (training_result["cached"]):
-			print("Loaded cached model. Skipping training.")
 			return
 		comparison_table = [
 			["Before Fine-Tuning", f"{training_result['pre_eval_accuracy']:.4f}"],
@@ -220,16 +222,16 @@ class BERTSpamClassifier:
 		self.output_dir.mkdir(parents=True, exist_ok=True)
 		self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
-		return TrainingArguments( # TODO: Explain args
+		return TrainingArguments(
 			output_dir=str(self.checkpoint_dir),
 			seed=self.seed,
-			num_train_epochs=self.num_train_epochs,
-			per_device_train_batch_size=self.per_device_train_batch_size,
-			per_device_eval_batch_size=self.per_device_eval_batch_size,
-			eval_strategy="epoch",
+			num_train_epochs=self.num_train_epochs,  # 4 gave the best balance between over/under fitting for the benchmark.
+			per_device_train_batch_size=self.per_device_train_batch_size, # 16 is a fair batch size for most CPUs/RAM, balancing speed and memory use.
+			per_device_eval_batch_size=self.per_device_eval_batch_size, # eval is more efficient than training, so 32 is roughly equivialent to 16 for training in terms of speed/memory.
+			eval_strategy="epoch", # For a data set this small, epoch eval is fine. If using the menedley set, may want to do 'steps' every 500 or 1000 or so.
 			save_strategy="epoch",
 			load_best_model_at_end=True,
-			metric_for_best_model="accuracy",
+			metric_for_best_model=self.metric_for_best_model, # f1 was actually found to be better over accuracy for this case, both fp and fn are reduced (hense a better f1 score), which is more important.
 			greater_is_better=True,
 			save_total_limit=1,
 			logging_dir=str(self.output_dir / "logs"),
@@ -281,7 +283,8 @@ class BERTSpamClassifier:
 		logits, labels = eval_pred
 		predictions = np.argmax(logits, axis=-1)
 		accuracy = accuracy_score(labels, predictions)
-		return {"accuracy": accuracy}
+		f1 = f1_score(labels, predictions)
+		return {"accuracy": accuracy, "f1": f1}
 
 	def _has_valid_cached_model(self, max_train_samples=None, max_test_samples=None):
 		if not self.model_dir.exists() or not self.metadata_path.exists():
@@ -315,4 +318,5 @@ class BERTSpamClassifier:
 			"per_device_eval_batch_size": self.per_device_eval_batch_size,
 			"max_train_samples": max_train_samples,
 			"max_test_samples": max_test_samples,
+			"metrics_model": self.metric_for_best_model,
 		}
