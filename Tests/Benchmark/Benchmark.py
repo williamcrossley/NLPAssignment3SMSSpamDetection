@@ -46,7 +46,6 @@ def train_and_evaluate_bert(train_lines, test_lines, force_retrain=False):
 	classifier = BERTSpamClassifier(
 		dataset_lines=train_lines,
 		output_dir=str(repo_root / "Models" / "BERT" / "artifacts" / "bert_benchmark"),
-		test_size=0.1,
 	)
 	trainingResult = classifier.train(force_retrain=force_retrain)
 	classifier.print_training_summary(trainingResult)

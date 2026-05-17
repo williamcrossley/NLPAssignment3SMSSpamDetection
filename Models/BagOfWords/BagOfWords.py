@@ -92,7 +92,6 @@ class BagOfWords:
 
 		return np.array(vectors)
 
-# TODO: Add reference to report for algorithm source
 class BernoulliSpamClassifier:
 	@staticmethod
 	def score_text(text, spam_vectors, ham_vectors, vocab_list, alpha=0.5, threshold=0.0):
