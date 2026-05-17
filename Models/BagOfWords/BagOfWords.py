@@ -7,17 +7,15 @@
 #   of espectially repeated punctuation, so it may be useful to keep it in.
 # Step 3: Tokenise. Split words and punctuation. <- TODO: punctuation tokenisation.
 # BUILD VECTORS
-# Step 4: Vectorise. Essentially make a vector for each text with the amount of columns as there is words in the vocab.
-#   I chose to do binary presence rather than frequency of a token in a text at i,j, as it works better with the Bernoulli classifier.
-# BUILD MERGED VOCAB AND ALIGNED VECTORS
-# Step 5: So we have the spam and ham vectors, but they have different vocabularies and column orders. We need to merge the vocabularies and align the vectors to the merged vocab.
-#   So we end up with the ham/spam vectors, but arranged so for a given word in the vocab, the same column index in both vectors correspond to that word.
-#   TODO: Make this more efficient by vectorising the whole set at once, and split the vectorisation based on labels, rather than vectorising separately and then merging.
+# Step 4: Build a single vocabulary from all texts (both spam and ham), then vectorise every text against this
+#   shared vocabulary. Binary presence is used rather than frequency at i,j, as it works better with the Bernoulli classifier.
+# Step 5: Split the resulting vector matrix into spam and ham subsets based on each row's label.
+#   Since both subsets share the same vocabulary and column ordering, no merging or realignment is needed.
 # CLASSIFICATION
 #   At a high level, for each word we compare how often it appears in spam vs ham messages,
 #   then convert that into a spam leaning weight (log-odds style). If a word is more common in spam,
 #   it gets a positive weight, if more common in ham it gets a negative weight.
-# Step 6: For a new message, vectorise it against the same merged vocabulary.
+# Step 6: For a new message, vectorise it against the same shared vocabulary.
 #   This gives us a binary presence vector where each column lines up with the same word used in training.
 # Step 7: Score the message by starting with the prior and adding weights for words that are present.
 #   Positive final score means spam, negative means ham (with an optional threshold if we want to tune sensitivity).
@@ -48,25 +46,32 @@ class BagOfWords:
 	def __init__(self, data):
 		self.data = data
 
-	def fit_transform(self, label_filter="spam"):
-		texts, vocab_list = self._preprocess(self.data, label_filter=label_filter)
+	def fit_transform(self):
+		texts, labels, vocab_list = self._preprocess(self.data)
 		vectors = self._vectorise(texts, vocab_list)
-		return vectors, vocab_list
+
+		spam_indices = [i for i, label in enumerate(labels) if label == "spam"]
+		ham_indices = [i for i, label in enumerate(labels) if label == "ham"]
+
+		spam_vectors = vectors[spam_indices]
+		ham_vectors = vectors[ham_indices]
+
+		return spam_vectors, ham_vectors, vocab_list
 
 	@staticmethod
-	def _preprocess(data, label_filter="spam"):
-		allowed_labels = BagOfWords._normalise_label_filter(label_filter)
+	def _preprocess(data):
 		texts = []
+		labels = []
 		vocab = set()
 
 		for label, text in data:
-			if allowed_labels is None or label in allowed_labels:
-				normalised_text = text.lower()
-				texts.append(normalised_text)
-				vocab.update(BagOfWords._tokenise(normalised_text))
+			normalised_text = text.lower()
+			texts.append(normalised_text)
+			labels.append(label.lower())
+			vocab.update(BagOfWords._tokenise(normalised_text))
 
 		vocab_list = np.array(sorted(vocab))
-		return texts, vocab_list
+		return texts, labels, vocab_list
 
 	@staticmethod
 	def _tokenise(text):
@@ -87,45 +92,17 @@ class BagOfWords:
 
 		return np.array(vectors)
 
-	@staticmethod
-	def _normalise_label_filter(label_filter):
-		if label_filter is None:
-			return None
-
-		if isinstance(label_filter, str):
-			return {label_filter.lower()}
-
-		normalised_labels = set()
-
-		for label in label_filter:
-			normalised_labels.add(label.lower())
-
-		return normalised_labels
-
 # TODO: Add reference to report for algorithm source
 class BernoulliSpamClassifier:
 	@staticmethod
-	def score_text(text, spam_vectors, spam_vocab_list, ham_vectors, ham_vocab_list, alpha=0.5, threshold=0.0):
-		merged_vocab_list = BernoulliSpamClassifier._merge_vocabularies(spam_vocab_list, ham_vocab_list)
-
-		aligned_spam_vectors = BernoulliSpamClassifier._align_vectors_to_shared_vocab(
-			spam_vectors,
-			spam_vocab_list,
-			merged_vocab_list
-		)
-		aligned_ham_vectors = BernoulliSpamClassifier._align_vectors_to_shared_vocab(
-			ham_vectors,
-			ham_vocab_list,
-			merged_vocab_list
-		)
-
+	def score_text(text, spam_vectors, ham_vectors, vocab_list, alpha=0.5, threshold=0.0):
 		log_prior, feature_log_odds = BernoulliSpamClassifier._compute_word_spam_weights(
-			aligned_spam_vectors,
-			aligned_ham_vectors,
+			spam_vectors,
+			ham_vectors,
 			alpha
 		)
 
-		text_vector = BernoulliSpamClassifier._vectorise_text_to_shared_vocab(text, merged_vocab_list)
+		text_vector = BernoulliSpamClassifier._vectorise_text_to_shared_vocab(text, vocab_list)
 		score = BernoulliSpamClassifier._compute_spam_score(text_vector, log_prior, feature_log_odds)
 
 		if score > threshold:
@@ -134,44 +111,6 @@ class BernoulliSpamClassifier:
 			label = "ham"
 
 		return score, label
-
-	@staticmethod
-	def _merge_vocabularies(spam_vocab_list, ham_vocab_list):
-		merged_vocab = set()
-
-		for word in spam_vocab_list:
-			merged_vocab.add(str(word))
-
-		for word in ham_vocab_list:
-			merged_vocab.add(str(word))
-
-		return sorted(merged_vocab)
-
-	@staticmethod
-	def _align_vectors_to_shared_vocab(vectors, source_vocab_list, target_vocab_list):
-		source_index = {}
-		target_index = {}
-		aligned_vectors = []
-
-		for index, word in enumerate(source_vocab_list):
-			source_index[str(word)] = index
-
-		for index, word in enumerate(target_vocab_list):
-			target_index[str(word)] = index
-
-		for vector in vectors:
-			aligned_vector = np.zeros(len(target_vocab_list), dtype=int)
-
-			for word in source_index:
-				source_position = source_index[word]
-				target_position = target_index[word]
-
-				if vector[source_position] > 0:
-					aligned_vector[target_position] = 1
-
-			aligned_vectors.append(aligned_vector)
-
-		return np.array(aligned_vectors)
 
 	@staticmethod
 	def _compute_word_spam_weights(spam_vectors, ham_vectors, alpha):

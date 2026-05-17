@@ -8,10 +8,9 @@ def test_bow(text, dataset_lines):
 	print("Testing BagOfWords/Bernoulli Classifier on small dataset...")
 	bow = BagOfWords(dataset_lines)
 
-	spam_vectors, spam_vocab = bow.fit_transform("spam")
-	ham_vectors, ham_vocab = bow.fit_transform("ham")
+	spam_vectors, ham_vectors, vocab = bow.fit_transform()
 
-	score, label = BernoulliSpamClassifier.score_text(text, spam_vectors, spam_vocab, ham_vectors, ham_vocab)
+	score, label = BernoulliSpamClassifier.score_text(text, spam_vectors, ham_vectors, vocab)
 
 	print_single_text_test_results("BagOfWords/Bernoulli", score, label)
 

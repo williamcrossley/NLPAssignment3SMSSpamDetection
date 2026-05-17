@@ -21,26 +21,18 @@ from Models.BERT.BERT import BERTSpamClassifier
 def train_and_evaluate_bow(train_lines, test_lines):
 	"Train BagOfWords/Bernoulli classifier on train_lines, evaluate on test_lines."
 	bow = BagOfWords(train_lines)
-	spam_vectors, spam_vocab = bow.fit_transform("spam")
-	ham_vectors, ham_vocab = bow.fit_transform("ham")
+	spam_vectors, ham_vectors, vocab_list = bow.fit_transform()
 
-	# Pre-compute shared vocab and aligned vectors once (expensive operations)
-	merged_vocab_list = BernoulliSpamClassifier._merge_vocabularies(spam_vocab, ham_vocab)
-	aligned_spam_vectors = BernoulliSpamClassifier._align_vectors_to_shared_vocab(
-		spam_vectors, spam_vocab, merged_vocab_list
-	)
-	aligned_ham_vectors = BernoulliSpamClassifier._align_vectors_to_shared_vocab(
-		ham_vectors, ham_vocab, merged_vocab_list
-	)
+	# Pre-compute word spam weights once
 	log_prior, feature_log_odds = BernoulliSpamClassifier._compute_word_spam_weights(
-		aligned_spam_vectors, aligned_ham_vectors, alpha=0.5
+		spam_vectors, ham_vectors, alpha=0.5
 	)
 
 	true_labels = []
 	predicted_labels = []
 
 	for label, text in test_lines:
-		text_vector = BernoulliSpamClassifier._vectorise_text_to_shared_vocab(text, merged_vocab_list)
+		text_vector = BernoulliSpamClassifier._vectorise_text_to_shared_vocab(text, vocab_list)
 		score = BernoulliSpamClassifier._compute_spam_score(text_vector, log_prior, feature_log_odds)
 		prediction = "spam" if score > 0.0 else "ham"
 
