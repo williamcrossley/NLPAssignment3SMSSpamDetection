@@ -1,6 +1,7 @@
 # Heavily inspired by the week 7 lab, but made more robust and reusable.
 # Supports fine tuning cache checks and auto detection of training state, and will retrain if cache/metadata is removed or changed.
-# Also added metadata tracking on the cached model so you can switch states between single text tests run against the full training set,
+# Different caches are used for the benchmark and main.py tests, but this is just for debugging, they use the same model params and training data.
+# Also added metadata tracking on the cached model so you can change params/training data and it will automatically retrain, mainly a debug feature but is really nice to have in general,
 # or use a subset of the training data for training, and a subset for testing.
 # It was also really helpful for testing.
 
