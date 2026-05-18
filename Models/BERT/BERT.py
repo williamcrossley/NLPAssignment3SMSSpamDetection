@@ -6,7 +6,6 @@
 # It was also really helpful for testing.
 
 # In terms of design choices and assumptions, we are using the same tiny bert from the lab, and the supplied tokeniser, fine tuner/trainer.
-# the majority of this file just deals with model prep, cache management, and evaluation. The fine tuning and tokenisation is pretty much as is from the lab, with some minor adjustments to work with the new dataset management.
 
 # Also, I had it so that the model would only read the dataset when training was required, but all uses of this model
 # (main and benchmark) use the same dataset as BOW, so I decided to make this class take the same DTO of already read and processed data
