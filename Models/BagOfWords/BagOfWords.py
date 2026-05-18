@@ -15,6 +15,7 @@
 #   At a high level, for each word we compare how often it appears in spam vs ham messages,
 #   then convert that into a spam leaning weight (log-odds style). If a word is more common in spam,
 #   it gets a positive weight, if more common in ham it gets a negative weight.
+#   Our implementation leaves out the negative evidence term of a traditional BNB classifier, as it didn't seem to improve performance and just added complexity.
 # Step 6: For a new message, vectorise it against the same shared vocabulary.
 #   This gives us a binary presence vector where each column lines up with the same word used in training.
 # Step 7: Score the message by starting with the prior and adding weights for words that are present.
@@ -41,7 +42,6 @@
 #       but I the purpose of this is a benchmark, not a fully optimised solution, as well as your tolerance for fp / fn depends on application, I will leave it at that.
 
 import numpy as np
-
 
 class BagOfWordsWithClassifier:
 	def __init__(self, data, alpha=0.5, threshold=0.0):
